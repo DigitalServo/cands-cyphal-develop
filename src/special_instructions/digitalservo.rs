@@ -33,7 +33,7 @@ impl CANInterface {
         self.send_digitalservo_response(channel, "cmdval", &[0.0])?;
         thread::sleep(time::Duration::from_millis(50));
 
-        self.send_digitalservo_response(channel, "drive", &[1.0])?;
+        self.send_digitalservo_response(channel, "drive", &[true])?;
         thread::sleep(time::Duration::from_millis(50));
 
         Ok(())
@@ -44,7 +44,7 @@ impl CANInterface {
         self.send_digitalservo_message("cmdval", &[0.0])?;
         thread::sleep(time::Duration::from_millis(50));
 
-        self.send_digitalservo_message("drive", &[1.0])?;
+        self.send_digitalservo_message("drive", &[true])?;
         thread::sleep(time::Duration::from_millis(50));
 
         Ok(())
@@ -53,7 +53,7 @@ impl CANInterface {
 
     pub fn drive_disable(&mut self, channel: u8) -> Result<(), Box<dyn std::error::Error>> {
 
-        self.send_digitalservo_response(channel, "drive", &[0.0])?;
+        self.send_digitalservo_response(channel, "drive", &[false])?;
         thread::sleep(time::Duration::from_millis(100));
 
         self.send_digitalservo_response(channel, "cmdval", &[0.0])?;
@@ -64,7 +64,7 @@ impl CANInterface {
 
     pub fn drive_disable_all(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         
-        self.send_digitalservo_message("drive", &[0.0])?;
+        self.send_digitalservo_message("drive", &[false])?;
         thread::sleep(time::Duration::from_millis(50));
 
         self.send_digitalservo_message("cmdval", &[0.0])?;
@@ -109,7 +109,11 @@ impl CANInterface {
             self.rx_complete_fifo.remove(*remove_target_id);
         }
 
-        Ok(Some(v)) 
+        match v.len() {
+            0 => Ok(None),
+            _ => Ok(Some(v)) 
+        }
+
     }
 
 }
