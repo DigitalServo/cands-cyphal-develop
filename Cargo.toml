@@ -3,7 +3,7 @@ name = "cands_cyphal"
 license = "MIT"
 authors = ["DigitalServo"]
 description = "This is a　packaged library for DigitalServo USB CAN board using Cyphal communication."
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 
 [features]
@@ -11,6 +11,6 @@ usb-ftdi = ["cands_interface/usb-ftdi"]
 raspberrypi = ["cands_interface/raspberrypi"]
 
 [dependencies]
-cands_interface = { version = "0.1.3", features = ["usb-ftdi"]}
+cands_interface = { version = "0.1.4"}
 cands_presentation = "0.1.0"
 cands_transport = "0.1.0"
