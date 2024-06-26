@@ -46,7 +46,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "cands_cyphal"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "cands_interface",
  "cands_presentation",
@@ -55,13 +55,14 @@ dependencies = [
 
 [[package]]
 name = "cands_interface"
-version = "0.1.0"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30ecbd4f3b1a93bacca300326ae9728e822e790dc46d1af27c6a060cea98d795"
+checksum = "a23a3cf276ca3f2151a08a0eb0f57e31ad8399b645e19f8cef0394223ca6f11d"
 dependencies = [
  "async-io",
  "ftdi-embedded-hal",
  "futures-lite",
+ "rppal",
 ]
 
 [[package]]
@@ -300,6 +301,15 @@ dependencies = [
  "rustix",
  "tracing",
  "windows-sys",
+]
+
+[[package]]
+name = "rppal"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae44db779bd0898047804d22b662a9dc533b142c077b3f7e36003f658835c5b9"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

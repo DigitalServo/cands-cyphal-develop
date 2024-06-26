@@ -1,4 +1,5 @@
-pub use cands_interface::{TCAN455xTranceiver, RxData, SIDFCONFIG, XIDFCONFIG};
+pub use cands_interface::{TCAN455xTranceiver, RxData, tcan4550::filter::{SIDFCONFIG, XIDFCONFIG}};
+
 pub use cands_transport::cyphal::{CyphalMiddleware, CyphalRxFrame, CyphalRxPacketType, CRC_SIZE_BYTES};
 pub use cands_presentation::cyphal as serde;
 
