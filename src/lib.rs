@@ -1,4 +1,4 @@
-pub use cands_interface::{TCAN455xTranceiver, RxData, tcan4550::filter::{SIDFCONFIG, XIDFCONFIG}};
+pub use cands_interface::{TCAN455xTranceiver, RxData, SIDConfig, XIDConfig};
 pub use cands_transport::cyphal::{CyphalMiddleware, CyphalRxFrame, CyphalRxPacketType, CRC_SIZE_BYTES};
 pub use cands_presentation::cyphal as serde;
 
@@ -11,15 +11,20 @@ const MTU_CAN_FD: usize = 64;
 const NODE_ID: u8 = 127;
 
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-const SIDF1: SIDFCONFIG = SIDFCONFIG { sft: 3, sfec: 0, sidf1: 0x123, sidf2: 0x456 };
+const SIDF1: SIDConfig = SIDConfig { sft: 3, sfec: 0, sidf1: 0x123, sidf2: 0x456 };
+
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-const SIDF2: SIDFCONFIG = SIDFCONFIG { sft: 3, sfec: 5, sidf1: 0x123, sidf2: 0x456 };
+const SIDF2: SIDConfig = SIDConfig { sft: 3, sfec: 5, sidf1: 0x123, sidf2: 0x456 };
+
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-const XIDF1: XIDFCONFIG = XIDFCONFIG { eft: 0, efec: 0, eidf1: 0x55555, eidf2: 0x77777 };
+const XIDF1: XIDConfig = XIDConfig { eft: 0, efec: 0, eidf1: 0x55555, eidf2: 0x77777 };
+
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-const SIDF: [SIDFCONFIG; 2] = [SIDF1, SIDF2];
+const SIDF: [SIDConfig; 2] = [SIDF1, SIDF2];
+
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-const XIDF: [XIDFCONFIG; 1] = [XIDF1];
+const XIDF: [XIDConfig; 1] = [XIDF1];
+
 
 pub struct CANInterface {
     pub middleware: CyphalMiddleware<MTU_CAN_FD>,
@@ -31,20 +36,18 @@ pub struct CANInterface {
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
 impl CANInterface {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mut middleware: CyphalMiddleware<MTU_CAN_FD> = CyphalMiddleware::<MTU_CAN_FD>::new(NODE_ID);
-        let mut driver: TCAN455xTranceiver = TCAN455xTranceiver::new()?;
+        let middleware: CyphalMiddleware<MTU_CAN_FD> = CyphalMiddleware::<MTU_CAN_FD>::new(NODE_ID);
+        let driver: TCAN455xTranceiver = TCAN455xTranceiver::new()?;
         
-        //Initialize: middleware
-        let now: u128 = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH).unwrap()
-            .as_millis();
-        let id_init: u8 = (now % 32) as u8;
-        middleware.transfer_id = id_init;
-
-        // Initialize: driver
-        driver.setup(&SIDF, &XIDF)?;
+        let mut interface: Self = Self {
+            middleware,
+            driver,
+            rx_complete_fifo: vec![],
+            rx_incomplete_fifo: vec![]
+        };
+        interface.init()?;
         
-        Ok(Self { middleware, driver, rx_complete_fifo: vec![], rx_incomplete_fifo: vec![] })
+        Ok(interface)
     }
 
     pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -103,13 +106,15 @@ impl CANInterface {
         Ok(())
     }
 
-    pub fn read_driver_rx_fifo(&mut self) -> std::io::Result<Option<RxData>>{
+    /// Read received data from a FIFO buffer on a device.
+    pub fn read_device_fifo(&mut self) -> std::io::Result<Option<RxData>>{
         match self.driver.receive() {
             Ok(rx_data) => Ok(rx_data),
             Err(err) => Err(err)
         }
     }
 
+    /// Load cyphal frames from a FIFO buffer on a user space.
     pub fn load_frames_from_buffer(&mut self, buffer: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         match self.middleware.try_read(buffer) {
             Ok(packets) => {
@@ -171,8 +176,10 @@ impl CANInterface {
         Ok(())
     }
 
+    /// Load cyphal frames from a FIFO buffer on a device.
+    /// It wraps "read_device_fifo" and "load_frames_from_buffer"
     pub fn load_frames(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let rx_data: Option<RxData> = self.read_driver_rx_fifo()?;
+        let rx_data: Option<RxData> = self.read_device_fifo()?;
 
         if let Some(rx_data) = rx_data {
             self.load_frames_from_buffer(&rx_data.fifo1)?

@@ -46,7 +46,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
 name = "cands_cyphal"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "cands_interface",
  "cands_presentation",
@@ -55,9 +55,9 @@ dependencies = [
 
 [[package]]
 name = "cands_interface"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "217db875421126cc1f9332d2a9b022810c2d1dd80e04b242b0de1795b0a2b766"
+checksum = "97e5f5fd7553e730a10fb338ee172def172f63fd84fb4cfc2fa9a190e9eacb13"
 dependencies = [
  "async-io",
  "ftdi-embedded-hal",

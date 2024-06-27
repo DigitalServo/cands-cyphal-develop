@@ -1,7 +1,4 @@
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-use std::{thread, time};
-
-#[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
 use cands_transport::cyphal::CyphalRxData;
 
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
@@ -10,11 +7,10 @@ use cands_presentation::cyphal::digitalservo::{
     traits::{DigitalServoPrimitiveData, IntoDigitalServoDataType}
 };
 
-#[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-use crate::CANInterface;
+mod shorthand;
 
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
-impl CANInterface {
+impl crate::CANInterface {
 
     pub fn send_digitalservo_message<T: Clone + IntoDigitalServoDataType + Into<DigitalServoPrimitiveData>>(&mut self, key: &str, value: &[T]) -> Result<(), Box<dyn std::error::Error>> {
         const SUBJECT_ID: u16 = 1160;
@@ -33,65 +29,15 @@ impl CANInterface {
         let payload:Vec<u8> = Dict::serialize(key, &[0.0]);
         self.send_request(SERVICE_ID, channel, &payload)
     }
-    
-    pub fn drive_enable(&mut self, channel: u8) -> Result<(), Box<dyn std::error::Error>> {
-
-        self.send_digitalservo_response(channel, "cmdval", &[0.0])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        self.send_digitalservo_response(channel, "drive", &[true])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        Ok(())
-    }
-
-    pub fn drive_enable_all(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-
-        self.send_digitalservo_message("cmdval", &[0.0])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        self.send_digitalservo_message("drive", &[true])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        Ok(())
-    }
-
-
-    pub fn drive_disable(&mut self, channel: u8) -> Result<(), Box<dyn std::error::Error>> {
-
-        self.send_digitalservo_response(channel, "drive", &[false])?;
-        thread::sleep(time::Duration::from_millis(100));
-
-        self.send_digitalservo_response(channel, "cmdval", &[0.0])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        Ok(())
-    }
-
-    pub fn drive_disable_all(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        
-        self.send_digitalservo_message("drive", &[false])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        self.send_digitalservo_message("cmdval", &[0.0])?;
-        thread::sleep(time::Duration::from_millis(50));
-
-        Ok(())
-    }
-
-    pub fn send_velocity_reference(&mut self, channel: u8, value: f64) -> Result<(), Box<dyn std::error::Error>> {
-        self.send_digitalservo_response(channel, "cmdval", &[value])
-    }
-
-    pub fn send_motion_reference(&mut self, channel: u8, value: &[f64; 4]) -> Result<(), Box<dyn std::error::Error>> {
-        self.send_digitalservo_response(channel, "cmdarray", value)
-    }
 
     pub fn get_key_value(&mut self) -> Result<Option<Vec<CyphalRxData<Dict>>>, Box<dyn std::error::Error>> {
         const TARGET_PORT_ID: [u16; 3] = [128, 129, 1160];
-        
+
         let mut v: Vec<CyphalRxData<Dict>> = Vec::new();
 
+        // Load data from a device FIFO and put RxFrames on a user-space FIFO
+        self.load_frames()?;
+        
         // Filter data which are to be processed
         let mut target_ids: Vec<usize> = vec![];
         for i in 0..self.rx_complete_fifo.len() {
