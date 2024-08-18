@@ -13,6 +13,6 @@ drvcan_v1 = []
 drvcan_v2 = []
 
 [dependencies]
-cands_interface = { version = "0.1.5"}
-cands_presentation = "0.1.0"
-cands_transport = "0.1.0"
+cands_presentation = {path = "../cands-presentation"}
+cands_transport = {path = "../cands-transport"}
+cands_interface = {path = "../cands-interface"}
