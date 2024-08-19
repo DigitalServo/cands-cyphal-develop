@@ -8,6 +8,9 @@ use cands_presentation::cyphal::digitalservo::{
     traits::{DigitalServoPrimitiveData, IntoDigitalServoDataType}
 };
 
+use futures_lite::FutureExt;
+use async_io::{block_on, Timer};
+
 mod shorthand;
 
 #[cfg(any(feature="usb-ftdi", feature="raspberrypi"))]
@@ -31,10 +34,44 @@ impl crate::CANInterface {
         self.send_request(SERVICE_ID, channel, &payload)
     }
 
-    pub fn send_digitalservo_set_value<T: Clone + IntoDigitalServoDataType + Into<DigitalServoPrimitiveData>>(&mut self, channel: u8, key: &str, value: &[T]) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn send_digitalservo_set_value<T>(
+        &mut self, channel: u8,
+        key: &str, value: &[T],
+        timeout: std::time::Duration
+    ) -> Result<(), Box<dyn std::error::Error>>
+        where T: Clone + IntoDigitalServoDataType + Into<DigitalServoPrimitiveData>
+    {
         const SERVICE_ID: u16 = 0x81;
         let payload:Vec<u8> = Dict::serialize(key, &value);
-        self.send_request(SERVICE_ID, channel, &payload)
+        self.send_request(SERVICE_ID, channel, &payload)?;
+
+        let task = async {
+            loop {
+                match self.get_result() {
+                    Ok(v) => {
+                        match v {
+                            Some(x) => {
+                                if x.iter().all(|y| y.data == 0) {
+                                    println!("ok");
+                                    return Ok(())
+                                }
+                            },
+                            None => {}
+                        }
+                    },
+                    Err(_) => {}
+                };
+                // Timer::after(std::time::Duration::from_millis(2)).await;
+            }
+        };
+    
+        let timeout_handler = async {
+            Timer::after(timeout).await;
+            // Err(std::io::ErrorKind::TimedOut)
+            Err("Timeout".into())
+        };
+    
+        block_on(task.or(timeout_handler))
     }
 
     pub fn send_digitalservo_get_value(&mut self, channel: u8, key: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -115,6 +152,40 @@ impl crate::CANInterface {
             _ => Ok(Some(v)) 
         }
 
+    }
+
+    pub fn get_result(&mut self) -> Result<Option<Vec<CyphalRxData<u8>>>, Box<dyn std::error::Error>> {
+        const TARGET_PORT_ID: u16 = 0x87;
+
+        let mut v: Vec<CyphalRxData<u8>> = Vec::new();
+
+        // Load data from a device FIFO and put RxFrames on a user-space FIFO
+        self.load_frames()?;
+        
+        // Filter data which are to be processed
+        let mut target_ids: Vec<usize> = vec![];
+        for i in 0..self.rx_complete_fifo.len() {
+            let port_id: u16 = self.rx_complete_fifo[i].props.port_id;
+            if port_id == TARGET_PORT_ID {
+                target_ids.push(i);
+            }
+        }
+
+        // Process target data
+        for process_target_id in &target_ids {
+            let packet = &self.rx_complete_fifo[*process_target_id];
+            v.push(CyphalRxData{data: packet.payload[0], props: packet.props});
+        }
+
+        // Delete processed data from rx_fifo
+        for remove_target_id in target_ids.iter().rev() {
+            self.rx_complete_fifo.remove(*remove_target_id);
+        }
+
+        match v.len() {
+            0 => Ok(None),
+            _ => Ok(Some(v)) 
+        }
     }
 
 }

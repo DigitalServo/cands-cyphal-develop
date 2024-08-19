@@ -16,3 +16,5 @@ drvcan_v2 = []
 cands_presentation = {path = "../cands-presentation"}
 cands_transport = {path = "../cands-transport"}
 cands_interface = {path = "../cands-interface"}
+async-io = "2.3.4"
+futures-lite = "2.3.0"
