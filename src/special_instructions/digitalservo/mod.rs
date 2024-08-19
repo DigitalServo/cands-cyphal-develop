@@ -49,7 +49,7 @@ impl crate::CANInterface {
         let mut target_ids: Vec<usize> = vec![];
         for i in 0..self.rx_complete_fifo.len() {
             let port_id: u16 = self.rx_complete_fifo[i].props.port_id;
-            if (port_id == TARGET_PORT_ID) {
+            if port_id == TARGET_PORT_ID {
                 target_ids.push(i);
             }
         }
